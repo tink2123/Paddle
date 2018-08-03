@@ -74,8 +74,13 @@ if (WITH_ANAKIN) # only needed in CI
     target_link_libraries(inference_anakin_api anakin anakin_saber_common)
     target_link_libraries(inference_anakin_api_shared anakin anakin_saber_common)
     if (WITH_TESTING)
-	CUDA_ADD_EXECUTABLE(inference_anakin_test api_anakin_engine_tester.cc)
-	target_link_libraries(inference_anakin_test inference_anakin_api_shared)
+	  CUDA_ADD_EXECUTABLE(inference_anakin_test api_anakin_engine_tester.cc)
+	  target_link_libraries(inference_anakin_test inference_anakin_api_shared)
         target_compile_options(inference_anakin_test BEFORE PUBLIC ${ANAKIN_COMPILE_EXTRA_FLAGS})
+
+
+	CUDA_ADD_EXECUTABLE(inference_anakin_cnn_test cnn.cc)
+	target_link_libraries(inference_anakin_cnn_test inference_anakin_api_shared)
+        target_compile_options(inference_anakin_cnn_test BEFORE PUBLIC ${ANAKIN_COMPILE_EXTRA_FLAGS})
      endif(WITH_TESTING)
 endif()

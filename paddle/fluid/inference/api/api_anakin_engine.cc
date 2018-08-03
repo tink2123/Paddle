@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "api_anakin_engine.h"
+#include "paddle/fluid/inference/api/api_anakin_engine.h"
 #include <cuda.h>
 #include <vector>
 
@@ -27,7 +27,7 @@ PaddleInferenceAnakinPredictor<Target>::PaddleInferenceAnakinPredictor(
 template <typename Target>
 bool PaddleInferenceAnakinPredictor<Target>::Init(const AnakinConfig &config) {
   if (!(graph_.load(config.model_file))) {
-    LOG(FATAL) << "fail to load graph from " << config.model_file;
+    LOG(INFO) << "fail to load graph from " << config.model_file;
     return false;
   }
   auto inputs = graph_.get_ins();
@@ -52,15 +52,15 @@ bool PaddleInferenceAnakinPredictor<Target>::Run(
     std::vector<PaddleTensor> *output_data, int batch_size) {
   for (const auto &input : inputs) {
     if (input.dtype != PaddleDType::FLOAT32) {
-      LOG(ERROR) << "Only support float type inputs. " << input.name
-                 << "'s type is not float";
+      LOG(INFO) << "Only support float type inputs. " << input.name
+              << "'s type is not float";
       return false;
     }
     auto d_tensor_in_p = executor_p_->get_in(input.name);
     auto net_shape = d_tensor_in_p->valid_shape();
     if (net_shape.size() != input.shape.size()) {
-      LOG(ERROR) << " input  " << input.name
-                 << "'s shape size should be equal to that of net";
+      LOG(INFO) << " input  " << input.name
+              << "'s shape size should be equal to that of net " << net_shape.size() << " " << input.shape.size();
       return false;
     }
     int sum = 1;
@@ -79,21 +79,28 @@ bool PaddleInferenceAnakinPredictor<Target>::Run(
     }
     d_tensor_in_p->reshape(tmp_shape);
 
-    float *d_data_p = d_tensor_in_p->mutable_data();
-    if (cudaMemcpy(d_data_p, static_cast<float *>(input.data.data()),
-                   d_tensor_in_p->valid_size() * sizeof(float),
-                   cudaMemcpyHostToDevice) != 0) {
-      LOG(ERROR) << "copy data from CPU to GPU error";
-      return false;
+    if (input.lod.size() > 0) {
+      if (input.lod.size() > 1) {
+        LOG(INFO) << " input lod first dim should <=1, but you set "
+                << input.lod.size();
+        return false;
+      }
+      std::vector<int> offset(input.lod[0].begin(), input.lod[0].end());
+      d_tensor_in_p->set_seq_offset(offset);
     }
-    cudaStreamSynchronize(NULL);
+
+    float *d_data_p = d_tensor_in_p->mutable_data();
+    CHECK_EQ(cudaMemcpy(d_data_p, static_cast<float *>(input.data.data()),
+                   d_tensor_in_p->valid_size() * sizeof(float),
+                   cudaMemcpyHostToDevice), 0) << "copy data from CPU to GPU error";
+    return true;
   }
   cudaDeviceSynchronize();
   executor_p_->prediction();
   cudaDeviceSynchronize();
 
   if (output_data->empty()) {
-    LOG(ERROR) << "At least one output should be set with tensors' names.";
+    LOG(INFO) << "At least one output should be set with tensors' names.";
     return false;
   }
   for (auto &output : *output_data) {
@@ -106,10 +113,9 @@ bool PaddleInferenceAnakinPredictor<Target>::Run(
     if (cudaMemcpy(output.data.data(), tensor->mutable_data(),
                    tensor->valid_size() * sizeof(float),
                    cudaMemcpyDeviceToHost) != 0) {
-      LOG(ERROR) << "copy data from GPU to CPU error";
+      LOG(INFO) << "copy data from GPU to CPU error";
       return false;
     }
-    cudaStreamSynchronize(NULL);
   }
   return true;
 }
@@ -125,14 +131,14 @@ anakin::Net<Target, anakin::saber::AK_FLOAT, anakin::Precision::FP32>
 template <typename Target>
 std::unique_ptr<PaddlePredictor>
 PaddleInferenceAnakinPredictor<Target>::Clone() {
-  VLOG(3) << "Anakin Predictor::clone";
+  LOG(INFO) << "Anakin Predictor::clone";
   std::unique_ptr<PaddlePredictor> cls(
       new PaddleInferenceAnakinPredictor<Target>());
   // construct executer from other graph
   auto anakin_predictor_p =
       dynamic_cast<PaddleInferenceAnakinPredictor<Target> *>(cls.get());
   if (!anakin_predictor_p) {
-    LOG(ERROR) << "fail to call Init";
+    LOG(INFO) << "fail to call Init";
     return nullptr;
   }
   anakin_predictor_p->get_executer().init(graph_);
@@ -141,25 +147,26 @@ PaddleInferenceAnakinPredictor<Target>::Clone() {
 }
 
 template class PaddleInferenceAnakinPredictor<anakin::NV>;
-template class PaddleInferenceAnakinPredictor<anakin::X86>;
+//template class PaddleInferenceAnakinPredictor<anakin::X86>;
 
 // A factory to help create difference predictor.
 template <>
 std::unique_ptr<PaddlePredictor> CreatePaddlePredictor<
     AnakinConfig, PaddleEngineKind::kAnakin>(const AnakinConfig &config) {
-  VLOG(3) << "Anakin Predictor create.";
+  LOG(INFO) << "Anakin Predictor create.";
   if (config.target_type == AnakinConfig::NVGPU) {
-    VLOG(3) << "Anakin Predictor create on [ NVIDIA GPU ].";
+    LOG(INFO) << "Anakin Predictor create on [ NVIDIA GPU ].";
     std::unique_ptr<PaddlePredictor> x(
         new PaddleInferenceAnakinPredictor<anakin::NV>(config));
     return x;
-  } else if (config.target_type == AnakinConfig::X86) {
-    VLOG(3) << "Anakin Predictor create on [ Intel X86 ].";
+  } /*else if (config.target_type == AnakinConfig::X86) {
+    LOG(INFO) << "Anakin Predictor create on [ Intel X86 ].";
     std::unique_ptr<PaddlePredictor> x(
         new PaddleInferenceAnakinPredictor<anakin::X86>(config));
     return x;
-  } else {
-    VLOG(3) << "Anakin Predictor create on unknown platform.";
+  } */
+else {
+    LOG(INFO) << "Anakin Predictor create on unknown platform.";
     return nullptr;
   }
 };
