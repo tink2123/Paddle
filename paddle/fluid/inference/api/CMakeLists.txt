@@ -67,16 +67,15 @@ if (WITH_ANAKIN) # only needed in CI
     # compile the libinference_anakin_api.a and compile with anakin.so.
     fetch_include_recursively(${ANAKIN_INCLUDE})
     # compile the libinference_anakin_api.a and anakin.so.
-    nv_library(inference_anakin_api SRCS api.cc api_anakin_engine.cc)
-    nv_library(inference_anakin_api_shared SHARED SRCS api.cc api_anakin_engine.cc)
+    cuda_add_library(inference_anakin_api api.cc api_anakin_engine.cc)
+    cuda_add_library(inference_anakin_api_shared api.cc api_anakin_engine.cc SHARED)
     target_compile_options(inference_anakin_api BEFORE PUBLIC ${ANAKIN_COMPILE_EXTRA_FLAGS})
     target_compile_options(inference_anakin_api_shared BEFORE PUBLIC ${ANAKIN_COMPILE_EXTRA_FLAGS})
     target_link_libraries(inference_anakin_api anakin anakin_saber_common)
     target_link_libraries(inference_anakin_api_shared anakin anakin_saber_common)
     if (WITH_TESTING)
-        cc_test(inference_anakin_test SRCS api_anakin_engine_tester.cc
-                                  ARGS --model=${ANAKIN_INSTALL_DIR}/mobilenet_v2.anakin.bin
-                                  DEPS inference_anakin_api_shared)
+	CUDA_ADD_EXECUTABLE(inference_anakin_test api_anakin_engine_tester.cc)
+	target_link_libraries(inference_anakin_test inference_anakin_api_shared)
         target_compile_options(inference_anakin_test BEFORE PUBLIC ${ANAKIN_COMPILE_EXTRA_FLAGS})
      endif(WITH_TESTING)
 endif()

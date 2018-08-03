@@ -16,7 +16,7 @@ limitations under the License. */
 #include <gtest/gtest.h>
 
 #include "gflags/gflags.h"
-#include "paddle/fluid/inference/api/paddle_inference_api.h"
+#include "paddle_inference_api.h"
 
 DEFINE_string(model, "", "Directory of the inference model(mobile_v2).");
 
@@ -32,7 +32,12 @@ AnakinConfig GetConfig() {
   return config;
 }
 
-TEST(inference, anakin) {
+
+}  // namespace paddle
+
+using namespace paddle;
+
+int main() {
   AnakinConfig config = GetConfig();
   auto predictor =
       CreatePaddlePredictor<AnakinConfig, PaddleEngineKind::kAnakin>(config);
@@ -55,12 +60,11 @@ TEST(inference, anakin) {
 
   std::vector<PaddleTensor> outputs(1, tensor_out);
 
-  ASSERT_TRUE(predictor->Run(paddle_tensor_feeds, &outputs));
+  predictor->Run(paddle_tensor_feeds, &outputs);
 
   float* data_o = static_cast<float*>(outputs[0].data.data());
   for (size_t j = 0; j < outputs[0].data.length(); ++j) {
     LOG(INFO) << "output[" << j << "]: " << data_o[j];
   }
+  return 0;
 }
-
-}  // namespace paddle

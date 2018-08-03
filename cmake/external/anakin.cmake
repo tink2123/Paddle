@@ -14,6 +14,7 @@ set(ANAKIN_COMPILE_EXTRA_FLAGS
     -Wno-error=comment -Wno-comment 
     -Wno-error=format -Wno-format 
     -Wno-error=switch -Wno-switch
+    -Wno-error=extra
     -Wno-error=return-type -Wno-return-type 
     -Wno-error=non-virtual-dtor -Wno-non-virtual-dtor
     -Wno-sign-compare
