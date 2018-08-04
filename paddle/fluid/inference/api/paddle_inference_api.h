@@ -1,11 +1,8 @@
 /* Copyright (c) 2018 PaddlePaddle Authors. All Rights Reserved.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
 http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -40,11 +37,12 @@ class PaddleBuf {
   // Copy only available when memory is managed externally.
   explicit PaddleBuf(const PaddleBuf&);
   PaddleBuf& operator=(const PaddleBuf&);
+  PaddleBuf& operator=(PaddleBuf&&);
   // Do not own the memory.
   PaddleBuf(void* data, size_t length)
       : data_(data), length_(length), memory_owned_{false} {}
   // Own memory.
-  explicit PaddleBuf(size_t length)
+  PaddleBuf(size_t length)
       : data_(new char[length]), length_(length), memory_owned_(true) {}
   // Resize to `length` bytes.
   void Resize(size_t length);
@@ -69,7 +67,7 @@ struct PaddleTensor {
   std::vector<int> shape;
   PaddleBuf data;  // blob of data.
   PaddleDType dtype;
-  std::vector<std::vector<uint64_t>> lod;  // lod data
+  std::vector<std::vector<size_t>> lod;  // Tensor+LoD equals LoDTensor
 };
 
 enum class PaddleEngineKind {
@@ -97,9 +95,10 @@ class PaddlePredictor {
   // `inputs`. `inputs` should be available until Run returns. Caller should be
   // responsible for the output tensor's buffer, either allocated or passed from
   // outside.
+  // `batch_size` is only used in TensorRT mode.
   virtual bool Run(const std::vector<PaddleTensor>& inputs,
                    std::vector<PaddleTensor>* output_data,
-                   int batch_size = -1) = 0;
+                   int batch_size = -1 /*used in TensorRT mode*/) = 0;
 
   // Clone a predictor that share the model weights, the Cloned predictor should
   // be thread-safe.
@@ -126,11 +125,9 @@ struct NativeConfig : public PaddlePredictor::Config {
 
 // Configurations for Anakin engine.
 struct AnakinConfig : public PaddlePredictor::Config {
-  enum TargetType { NVGPU = 0, X86 };
   int device;
   std::string model_file;
   int max_batch_size{-1};
-  TargetType target_type;
 };
 
 struct TensorRTConfig : public NativeConfig {
