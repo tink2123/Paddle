@@ -14,7 +14,6 @@ limitations under the License. */
 
 #pragma once
 
-#include "paddle/fluid/operators/elementwise_op.h"
 #include "paddle/fluid/operators/elementwise_op_function.h"
 
 namespace paddle {
@@ -56,10 +55,9 @@ struct MaxGradDy {
 };
 
 template <typename DeviceContext, typename T>
-class ElementwiseMaxGradKernel : public ElemwiseGradKernel<T> {
+class ElementwiseMaxGradKernel : public framework::OpKernel<T> {
  public:
   void Compute(const framework::ExecutionContext& ctx) const override {
-    ElemwiseGradKernel<T>::Compute(ctx);
     using Tensor = framework::Tensor;
 
     auto* x = ctx.Input<Tensor>("X");

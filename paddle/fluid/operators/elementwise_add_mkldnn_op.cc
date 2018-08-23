@@ -137,10 +137,9 @@ class EltwiseAddMKLDNNKernel : public framework::OpKernel<T> {
 };
 
 template <typename T>
-class EltwiseAddMKLDNNGradKernel : public ElemwiseGradKernel<T> {
+class EltwiseAddMKLDNNGradKernel : public framework::OpKernel<T> {
  public:
   void Compute(const framework::ExecutionContext& ctx) const override {
-    ElemwiseGradKernel<T>::Compute(ctx);
     using Tensor = framework::Tensor;
 
     auto* dout = ctx.Input<Tensor>(framework::GradVarName("Out"));
