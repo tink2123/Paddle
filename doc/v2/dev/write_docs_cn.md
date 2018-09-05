@@ -88,7 +88,7 @@ PaddlePaddle文档使用 [sphinx](http://www.sphinx-doc.org/en/1.4.8/) 自动生
  - 查看浏览器中的更改，请单击右上角的Refresh Content
  - 将修改的文档添加到菜单或更改其在菜单上的位置，请单击页面左侧菜单顶部的Edit menu按钮，打开菜单编辑器
 
-##贡献或修改Python API
+## 贡献或修改Python API
 
 在build了新的pybind目标并测试了新的Python API之后，您可以继续测试文档字符串和注释的显示方式:
 
