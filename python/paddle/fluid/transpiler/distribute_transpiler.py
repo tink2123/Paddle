@@ -164,6 +164,7 @@ class DistributeTranspiler(object):
     Examples:
         .. code-block:: python
 
+            # for pserver mode
             pserver_endpoints = "192.168.0.1:6174,192.168.0.2:6174"
             trainer_endpoints = "192.168.0.1:6174,192.168.0.2:6174"
             current_endpoint = "192.168.0.1:6174"
@@ -180,7 +181,6 @@ class DistributeTranspiler(object):
                                                                  pserver_program)
             elif role == "TRAINER":
                  trainer_program = t.get_trainer_program()
-
             # for nccl2 mode
             config = fluid.DistributeTranspilerConfig()
             config.mode = "nccl2"
