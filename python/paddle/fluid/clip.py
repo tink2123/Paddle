@@ -139,7 +139,7 @@ class GradientClipByValue(BaseGradientClipAttr):
               learning_rate=1.0,
               regularizer=fluid.regularizer.L1Decay(1.0),
               trainable=True,
-              gradient_clip=fluid.clip.GradientClipByValue(-1.0, 1.0))
+              clip=fluid.clip.GradientClipByValue(-1.0, 1.0))
             y_predict = fluid.layers.fc(input=x, size=1, param_attr=w_param_attrs)
     """
 
@@ -190,7 +190,7 @@ class GradientClipByNorm(BaseGradientClipAttr):
               learning_rate=1.0,
               regularizer=fluid.regularizer.L1Decay(1.0),
               trainable=True,
-              gradient_clip=fluid.clip.GradientClipByNorm(clip_norm=2.0))
+              clip=fluid.clip.GradientClipByNorm(clip_norm=2.0))
             y_predict = fluid.layers.fc(input=x, size=1, param_attr=w_param_attrs)
 
     """
