@@ -222,13 +222,13 @@ class Precision(MetricBase):
     Examples:
         .. code-block:: python
 
-        metric = fluid.metrics.Precision()
-        for pass in range(PASSES):
-            metric.reset()
-            for data in train_reader():
-                loss, preds, labels = exe.run(fetch_list=[cost, preds, labels])
-            metric.update(preds=preds, labels=labels)
-            numpy_precision = metric.eval()
+            metric = fluid.metrics.Precision()
+            for pass in range(PASSES):
+                metric.reset()
+                for data in train_reader():
+                    loss, preds, labels = exe.run(fetch_list=[cost, preds, labels])
+                metric.update(preds=preds, labels=labels)
+                numpy_precision = metric.eval()
     """
 
     def __init__(self, name=None):
@@ -257,7 +257,7 @@ class Precision(MetricBase):
 
 
 class Recall(MetricBase):
-    """
+"""
     Recall (also known as sensitivity) is the fraction of
     relevant instances that have been retrieved over the
     total amount of relevant instances
@@ -267,13 +267,13 @@ class Recall(MetricBase):
     Examples:
         .. code-block:: python
 
-        metric = fluid.metrics.Recall()
-        for pass in range(PASSES):
-            metric.reset()
-            for data in train_reader():
-                loss, preds, labels = exe.run(fetch_list=[cost, preds, labels])
-            metric.update(preds=preds, labels=labels)
-            numpy_recall = metric.eval()
+            metric = fluid.metrics.Recall()
+            for pass in range(PASSES):
+                metric.reset()
+                for data in train_reader():
+                    loss, preds, labels = exe.run(fetch_list=[cost, preds, labels])
+                metric.update(preds=preds, labels=labels)
+                numpy_recall = metric.eval()
     """
 
     def __init__(self, name=None):
@@ -357,7 +357,7 @@ class Accuracy(MetricBase):
 
 
 class ChunkEvaluator(MetricBase):
-    """
+        """
     Accumulate counter numbers output by chunk_eval from mini-batches and
     compute the precision recall and F1-score using the accumulated counter
     numbers.
@@ -449,8 +449,9 @@ class EditDistance(MetricBase):
                 distance_evaluator.update(distances, seq_num)
                 distance, instance_error = distance_evaluator.eval()
 
-        In the above example:
+    In the above example:
         'distance' is the average of the edit distance in a pass.
+        
         'instance_error' is the instance error rate in a pass.
 
     """
