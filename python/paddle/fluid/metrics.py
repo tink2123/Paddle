@@ -257,7 +257,7 @@ class Precision(MetricBase):
 
 
 class Recall(MetricBase):
-"""
+    """
     Recall (also known as sensitivity) is the fraction of
     relevant instances that have been retrieved over the
     total amount of relevant instances
@@ -357,7 +357,7 @@ class Accuracy(MetricBase):
 
 
 class ChunkEvaluator(MetricBase):
-        """
+    """
     Accumulate counter numbers output by chunk_eval from mini-batches and
     compute the precision recall and F1-score using the accumulated counter
     numbers.
