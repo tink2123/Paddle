@@ -748,14 +748,15 @@ def dynamic_gru(input,
             and sequence length is the same with the input.
 
     Examples:
-		.. code-block:: python
-			dict_dim, emb_dim = 128, 64
-			data = fluid.layers.data(name='sequence', shape=[1],
-									 dtype='int32', lod_level=1)
-			emb = fluid.layers.embedding(input=data, size=[dict_dim, emb_dim])
-			hidden_dim = 512
-			x = fluid.layers.fc(input=emb, size=hidden_dim * 3)
-			hidden = fluid.layers.dynamic_gru(input=x, size=hidden_dim)
+	    .. code-block:: python
+			
+					dict_dim, emb_dim = 128, 64
+					data = fluid.layers.data(name='sequence', shape=[1],
+																	 dtype='int32', lod_level=1)
+					emb = fluid.layers.embedding(input=data, size=[dict_dim, emb_dim])
+					hidden_dim = 512
+					x = fluid.layers.fc(input=emb, size=hidden_dim * 3)
+					hidden = fluid.layers.dynamic_gru(input=x, size=hidden_dim)
     """
 
     helper = LayerHelper('gru', **locals())
