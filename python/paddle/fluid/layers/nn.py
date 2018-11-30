@@ -748,9 +748,7 @@ def dynamic_gru(input,
             and sequence length is the same with the input.
 
     Examples:
-
-        .. code-block:: python
-
+		.. code-block:: python
 			dict_dim, emb_dim = 128, 64
 			data = fluid.layers.data(name='sequence', shape=[1],
 									 dtype='int32', lod_level=1)
