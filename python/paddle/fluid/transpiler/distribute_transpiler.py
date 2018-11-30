@@ -130,7 +130,8 @@ class DistributeTranspilerConfig(object):
         split_method (PSDispatcher): RoundRobin or HashName can be used
             try to choose the best method to balance loads for pservers.
         min_block_size (int): Minimum splitted element number in block.
-            According:https://github.com/PaddlePaddle/Paddle/issues/8638#issuecomment-369912156
+            According:https://github.com/PaddlePaddle/Paddle/issues/8638#is
+            suecomment-369912156
             We can use bandwidth effiently when data size is larger than 2MB.If you
             want to change it, please be sure you see the slice_variable function.
     """
