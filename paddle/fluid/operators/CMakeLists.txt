@@ -50,6 +50,7 @@ endif()
 
 register_operators(EXCLUDES py_func_op warpctc_op dgc_op conv_fusion_op
 	sync_batch_norm_op deformable_conv_op three_nn_op three_interp_op
+  gather_point_op query_ball_op sync_batch_norm_op deformable_conv_op
   DEPS ${OP_HEADER_DEPS} ${OP_PREFETCH_DEPS})
 
 if (WITH_GPU)
@@ -74,6 +75,10 @@ if (WITH_GPU)
     file(APPEND ${pybind_file} "USE_CUDA_ONLY_OP(three_nn);\n")
     op_library(three_interp_op)
     file(APPEND ${pybind_file} "USE_CUDA_ONLY_OP(three_interp);\n")
+    op_library(gather_point_op)
+    file(APPEND ${pybind_file} "USE_CUDA_ONLY_OP(gather_point);\n")
+    op_library(query_ball_op)
+    file(APPEND ${pybind_file} "USE_CUDA_ONLY_OP(query_ball);\n")
 else()
     op_library(warpctc_op DEPS dynload_warpctc sequence_padding sequence_scale)
 endif()
