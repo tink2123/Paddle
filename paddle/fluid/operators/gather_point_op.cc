@@ -9,47 +9,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License. */
 
-#include <memory>
-#include <string>
-#include <vector>
 #include "paddle/fluid/framework/op_registry.h"
-
 namespace paddle {
 namespace operators {
 
 using Tensor = framework::Tensor;
 
-class FarthestPointSamplingOpMaker : public framework::OpProtoAndCheckerMaker {
- public:
-  void Make() override {
-    AddInput("X",
-             "(Tensor)input point cloud dataset with shape (B, N, 3)"
-             "B is batch size, N is points's nums, 3 is (x,y,z) coordinate");
-    AddOutput("Output",
-              "(Tensor)return sampled points with shape (B, M)"
-              "B is batch size, M is points's nums");
-    AddAttr<int>("sampled_point_num", "sampling points's num")
-        .SetDefault(0)
-        .EqualGreaterThan(0);
-    AddComment(
-        R"Doc(
-            Sampling point based on 
-            its max eucliden distance with other points.)Doc");
-  }
-};
-
-class FarthestPointSamplingOp : public framework::OperatorWithKernel {
+class GatherPointOp : public framework::OperatorWithKernel {
  public:
   using framework::OperatorWithKernel::OperatorWithKernel;
 
- protected:
   void InferShape(framework::InferShapeContext *ctx) const override {
     PADDLE_ENFORCE(ctx->HasInput("X"), "Input(X) shoud not be null");
     auto x_dims = ctx->GetInputDim("X");
-    PADDLE_ENFORCE(x_dims.size() == 3,
-                   "Input(X) of FathestPointSamplingOp should be 3-D Tensor");
-    const int m = ctx->Attrs().Get<int>("sampled_point_num");
-    ctx->SetOutputDim("Output", {x_dims[0], m});
+    PADDLE_ENFORCE(x_dims.size() == 3 && x_dims[2] == 3,
+                   "Input(X) of GatherPointOp should be 3-D Tensor, the last "
+                   "dimension must be 3");
+    auto index_dims = ctx->GetInputDim("Index");
+    PADDLE_ENFORCE(index_dims.size() == 2 && index_dims[0] == x_dims[0],
+                   "Index of GatherPointop should be 2-D Tensor");
+    ctx->SetOutputDim("Output", {x_dims[0], index_dims[1], 3});
   }
 
  protected:
@@ -60,9 +39,34 @@ class FarthestPointSamplingOp : public framework::OperatorWithKernel {
   }
 };
 
+class GatherPointOpMaker : public framework::OpProtoAndCheckerMaker {
+ public:
+  void Make() override {
+    AddInput("X",
+             "Input points with shape (batch, n, 3), n is input "
+             "points's num");
+    AddInput("Index",
+             "input index with shape (batch, m), m is output points's num");
+    AddOutput("Output", "output points with shape(batch, m, 3)");
+    AddComment(
+        R"Doc(
+        Gather Point Operator.
+        Out is obtained by gathering entries of X indexed by Index and 
+        concatenate them together.
+
+        Example:
+        X = [[1, 2, 3],
+             [3, 4, 5],
+             [5, 6, 7]]
+        Index = [[1, 2]]
+
+        Then:
+        Out = [[3, 4, 5],[5, 6, 7]])Doc");
+  }
+};
+
 }  // namespace operators
 }  // namespace paddle
 
 namespace ops = paddle::operators;
-REGISTER_OPERATOR(farthest_point_sampling, ops::FarthestPointSamplingOp,
-                  ops::FarthestPointSamplingOpMaker);
+REGISTER_OPERATOR(gather_point, ops::GatherPointOp, ops::GatherPointOpMaker);
