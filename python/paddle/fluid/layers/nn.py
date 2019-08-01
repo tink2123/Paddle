@@ -120,7 +120,9 @@ __all__ = [
     'resize_bilinear',
     'resize_nearest',
     'three_nn',
+    'three_interp',
     'gather',
+    'gather_point',
     'scatter',
     'sequence_scatter',
     'random_crop',
@@ -210,6 +212,7 @@ __all__ = [
     'unfold',
     'deformable_roi_pooling',
     'shard_index',
+    'query_ball',
 ]
 
 kIgnoreIndex = -100
@@ -8045,7 +8048,7 @@ def three_nn(input, known, eps=1e-10, name=None):
 
             import paddle.fluid as fluid
             x = fluid.layers.data(name='x', shape=[16, 3], dtype='float32')
-            index = fluid.layers.data(name='index', shape=[32, 3], dtype='int32')
+            known = fluid.layers.data(name='known', shape=[32, 3], dtype='float32')
             distance, idx = fluid.layers.three_nn(input, known)
     """
     helper = LayerHelper('three_nn', **locals())
@@ -8060,6 +8063,49 @@ def three_nn(input, known, eps=1e-10, name=None):
                  "Idx": idx},
         attrs={'eps': eps})
     return (dist, idx)
+
+
+def three_interp(input, weight, idx, name=None):
+    """
+    **Three Interpolate Layer**
+
+    This operator calculate interpolate results from input, weight and
+    index.
+
+    Args:
+        input (Variable): The input tensor of three_interp operator. This
+                          is a 3-D tensor with shape of [B, M, C].
+        weight (Variable): The weight tensor of three_interp operator. This
+                          is a 3-D tensor with shape of [B, N, 3].
+        idx (Variable): The index tensor of three_interp operator. This
+                          is a 3-D tensor with shape of [B, N, 3].
+        name(str|None): A name for this layer(optional). If set None, the layer
+                        will be named automatically.
+
+    Returns:
+        output (Variable): The output tensor of three_interp operator.
+                             This is a 3-D tensor with shape of [B, N, C].
+
+    Examples:
+
+        .. code-block:: python
+
+            import paddle.fluid as fluid
+            x = fluid.layers.data(name='x', shape=[16, 3], dtype='float32')
+            weight = fluid.layers.data(name='weight', shape=[32, 3], dtype='float32')
+            index = fluid.layers.data(name='index', shape=[32, 3], dtype='int32')
+            out = fluid.layers.three_interp(x, weight, index)
+    """
+    helper = LayerHelper('three_interp', **locals())
+    dtype = helper.input_dtype()
+    out = helper.create_variable_for_type_inference(dtype)
+    helper.append_op(
+        type="three_interp",
+        inputs={"X": input,
+                "Weight": weight,
+                "Idx": idx},
+        outputs={"Out": out, })
+    return out
 
 
 def gather(input, index, overwrite=True):
@@ -8121,6 +8167,48 @@ def gather(input, index, overwrite=True):
                 "Index": index},
         outputs={"Out": out},
         attrs={'overwrite': overwrite})
+    return out
+
+
+def gather_point(input, index):
+    """
+    **Gather Point Layer**
+    Output is obtained by gathering entries of X indexed by `index` 
+    and concatenate them together.
+    .. math::
+        Out = X[Index]
+    .. code-block:: text
+        Given:
+        X = [[1, 2, 3],
+             [3, 4, 5],
+             [5, 6, 7]]
+        Index = [[1, 2]
+        Then:
+        Out = [[3, 4, 5],
+               [5, 6, 7]]
+    Args:
+        input (Variable): The source input with rank>=1, This
+                          is a 3-D tensor with shape of [B, N, 3].
+        index (Variable): The index input with shape of [B, M].
+      
+    Returns:
+        output (Variable): The output is a tensor with shape of [B,M].
+    Examples:
+        .. code-block:: python
+            import paddle.fluid as fluid
+            x = fluid.layers.data(name='x', shape=[-1, 5, 3], dtype='float32')
+            index = fluid.layers.data(name='index', shape=[-1, 1], dtype='int32')
+            output = fluid.layers.gather_point(x, index)
+    """
+
+    helper = LayerHelper('gather_point', **locals())
+    dtype = helper.input_dtype()
+    out = helper.create_variable_for_type_inference(dtype)
+    helper.append_op(
+        type="gather_point",
+        inputs={"X": input,
+                "Index": index},
+        outputs={"Output": out})
     return out
 
 
@@ -12705,4 +12793,42 @@ def shard_index(input, index_num, nshards, shard_id, ignore_value=-1):
             'ignore_value': ignore_value
         },
         stop_gradient=True)
+    return out
+
+
+def query_ball(input, new_points, radius, n_sample):
+    """
+    **Query Ball Layer**
+
+    Output is a tensor with the indicies of the features that form the query balls.
+
+    Args:
+        input(Variable): XYZ coordinates of features with shape of [B,N,3].
+        new_points(Variable): Centers coordinates of the ball query with shape of [B,M,3].
+        radius(float|Variable): Radius of the balls.
+        n_sample(int|Variable): Maximum number of features in the balls.
+    Return:
+        output(Variable): Tensor with the indicies of the features that form the query balls,with shape of [B,M,n_sample]
+
+    Examples:
+        .. code-block::python
+
+            import paddle.fluid as fluid
+            x = fluid.layers.data(name='points',shape=[-1,5,3],dtype='float32')
+            new_points = fluid.layers.data(name='new_points', shape=[-1,2,3], dtype='float32')
+            output = fluid.layers.query_ball(x,new_points,radius=4.0,n_sample=5)
+
+
+
+    """
+    helper = LayerHelper('query_ball', **locals())
+    dtype = helper.input_dtype()
+    out = helper.create_variable_for_type_inference(dtype)
+    helper.append_op(
+        type="query_ball",
+        inputs={"Points": input,
+                "New_Points": new_points},
+        attrs={"N_sample": n_sample,
+               "Radius": radius},
+        outputs={"Output": out})
     return out
