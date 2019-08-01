@@ -110,7 +110,9 @@ function(op_library TARGET)
     # Define operators that don't need pybind here.
     foreach(manual_pybind_op "compare_op" "logical_op" "nccl_op"
 "tensor_array_read_write_op" "tensorrt_engine_op" "conv_fusion_op"
-"fusion_transpose_flatten_concat_op" "fusion_conv_inception_op" "sync_batch_norm_op" "deformable_conv_op" "dgc_op" "gather_point_op" "query_ball_op")
+"fusion_transpose_flatten_concat_op" "fusion_conv_inception_op" 
+"sync_batch_norm_op" "deformable_conv_op" "dgc_op" "three_nn_op"
+"three_interp_op" "gather_point_op" "query_ball_op")
         if ("${TARGET}" STREQUAL "${manual_pybind_op}")
             set(pybind_flag 1)
         endif()

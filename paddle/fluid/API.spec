@@ -176,6 +176,8 @@ paddle.fluid.layers.image_resize (ArgSpec(args=['input', 'out_shape', 'scale', '
 paddle.fluid.layers.image_resize_short (ArgSpec(args=['input', 'out_short_len', 'resample'], varargs=None, keywords=None, defaults=('BILINEAR',)), ('document', 'bd97ebfe4bdf5110a5fcb8ecb626a447'))
 paddle.fluid.layers.resize_bilinear (ArgSpec(args=['input', 'out_shape', 'scale', 'name', 'actual_shape', 'align_corners', 'align_mode'], varargs=None, keywords=None, defaults=(None, None, None, None, True, 1)), ('document', '548c7c2ead5771d15abbaad505f901e9'))
 paddle.fluid.layers.resize_nearest (ArgSpec(args=['input', 'out_shape', 'scale', 'name', 'actual_shape', 'align_corners'], varargs=None, keywords=None, defaults=(None, None, None, None, True)), ('document', 'b7d810d1e251c5957c1efa6aa699d2d0'))
+paddle.fluid.layers.three_nn (ArgSpec(args=['input', 'known', 'eps', 'name'], varargs=None, keywords=None, defaults=(1e-10, None)), ('document', 'af61fecb01ab774ac1b1735492965b26'))
+paddle.fluid.layers.three_interp (ArgSpec(args=['input', 'weight', 'idx', 'name'], varargs=None, keywords=None, defaults=(None,)), ('document', '1d1f7f3d73e34df199fbdce404cf90e1'))
 paddle.fluid.layers.gather (ArgSpec(args=['input', 'index', 'overwrite'], varargs=None, keywords=None, defaults=(True,)), ('document', 'f985c9b66e3aec96fa753a8eb44c991c'))
 paddle.fluid.layers.gather_point (ArgSpec(args=['input', 'index'], varargs=None, keywords=None, defaults=None), ('document', '4ce8de7f83fb11a660e2c29752077379'))
 paddle.fluid.layers.scatter (ArgSpec(args=['input', 'index', 'updates', 'name', 'overwrite'], varargs=None, keywords=None, defaults=(None, True)), ('document', '69b22affd4a6326502af166f04c095ab'))
