@@ -1307,6 +1307,24 @@ class TestBook(LayerTest):
             output = layers.resize_nearest(x, scale=3)
             return (output)
 
+    def make_three_nn(self):
+        with program_guard(fluid.default_main_program(),
+                           fluid.default_startup_program()):
+            x = self._get_data(name='x', shape=[16, 3], dtype="float32")
+            known = self._get_data(name='known', shape=[8, 3], dtype="float32")
+            dist, idx = layers.three_nn(x, known)
+            return (dist, idx)
+
+    def make_three_interp(self):
+        with program_guard(fluid.default_main_program(),
+                           fluid.default_startup_program()):
+            x = self._get_data(name='x', shape=[16, 32], dtype="float32")
+            weight = self._get_data(
+                name='weight', shape=[32, 3], dtype="float32")
+            idx = self._get_data(name='idx', shape=[32, 3], dtype="int32")
+            out = layers.three_interp(x, weight, idx)
+            return (out)
+
     def make_polygon_box_transform(self):
         with program_guard(fluid.default_main_program(),
                            fluid.default_startup_program()):
@@ -1800,6 +1818,14 @@ class TestBook(LayerTest):
             z = layers.lod_reset(x=x, target_lod=[1, 2, 3])
             self.assertTrue(z.lod_level == 1)
             return z
+
+    def test_lod_append(self):
+        with self.static_graph():
+            x = layers.data(
+                name='x', shape=[6, 10], dtype='float32', lod_level=1)
+            y = layers.lod_append(x, [1, 1, 1, 1, 1, 1])
+            self.assertTrue(y.lod_level == 1)
+            return y
 
     def test_affine_grid(self):
         with self.static_graph():

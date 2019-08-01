@@ -108,6 +108,7 @@ __all__ = [
     'squeeze',
     'unsqueeze',
     'lod_reset',
+    'lod_append',
     'lrn',
     'pad',
     'pad_constant_like',
@@ -119,7 +120,10 @@ __all__ = [
     'image_resize_short',
     'resize_bilinear',
     'resize_nearest',
+    'three_nn',
+    'three_interp',
     'gather',
+    'gather_point',
     'scatter',
     'sequence_scatter',
     'random_crop',
@@ -209,6 +213,7 @@ __all__ = [
     'unfold',
     'deformable_roi_pooling',
     'shard_index',
+    'query_ball',
 ]
 
 kIgnoreIndex = -100
@@ -7019,7 +7024,7 @@ def lod_reset(x, y=None, target_lod=None):
     considered as target LoD first, otherwise :attr:`y.data` would be
     considered as target LoD. If :attr:`y` is not provided, target LoD should
     be specified by :attr:`target_lod`. If target LoD is specified by
-    :attr:`Y.data` or :attr:`target_lod`, only one level LoD is supported.
+    :attr:`y.data` or :attr:`target_lod`, only one level LoD is supported.
 
     .. code-block:: text
 
@@ -7071,7 +7076,7 @@ def lod_reset(x, y=None, target_lod=None):
                 out.dims = [6, 1]
 
     Args:
-        x (Variable): Input variable which could be a Tensor or LodTensor.
+        x (Variable): Input variable which could be a Tensor or LoDTensor.
         y (Variable|None): If provided, output's LoD would be derived
                            from :attr:`y`.
         target_lod (list|tuple|None): One level LoD which should be considered
@@ -7104,8 +7109,60 @@ def lod_reset(x, y=None, target_lod=None):
             attrs={'target_lod': target_lod},
             outputs={'Out': out})
     else:
-        raise ValueError("y and target_lod should not be both None.")
+        raise ValueError("y and target_lod should not be both none.")
+    return out
 
+
+def lod_append(x, level):
+    """
+    Append level to LoD of :attr:`x`.
+
+    .. code-block:: text
+
+        * Example 1:
+
+            given a 1-level LoDTensor x:
+                x.lod =  [[ 2,           3,                   1 ]]
+                x.data = [[1.0], [2.0], [3.0], [4.0], [5.0], [6.0]]
+                x.dims = [6, 1]
+
+            level: [1, 1, 1, 1, 1, 1, 1]
+
+            then we get a 2-level LoDTensor:
+                x.lod =  [[ 2, 3, 1 ], [1, 1, 1, 1, 1, 1]]
+                x.data = [[1.0], [2.0], [3.0], [4.0], [5.0], [6.0]]
+                x.dims = [6, 1]
+
+    Args:
+        x (Variable): Input variable which could be a tensor or LoDTensor.
+        level (list|tuple): The LoD level to be appended into LoD of x.
+
+    Returns:
+        Variable: Output variable with new LoD level.
+
+    Raises:
+        ValueError: If :attr:`y` is None or and :attr:`level` is not Iterator.
+
+    Examples:
+        .. code-block:: python
+
+            import paddle.fluid as fluid
+            x = fluid.layers.data(name='x', shape=[6, 10], lod_level=1)
+            out = fluid.layers.lod_append(x, [1,1,1,1,1,1])
+    """
+    from collections import Iterable
+    if x is None:
+        raise ValueError("Input(x) can't be None.")
+    if not isinstance(level, Iterable):
+        raise ValueError("Input(level) must be list or tuple.")
+    helper = LayerHelper("lod_append", **locals())
+    out = helper.create_variable_for_type_inference(dtype=x.dtype)
+    helper.append_op(
+        type="lod_reset",
+        inputs={'X': x},
+        attrs={'target_lod': level,
+               'append': True},
+        outputs={'Out': out})
     return out
 
 
@@ -8000,6 +8057,96 @@ def image_resize_short(input, out_short_len, resample='BILINEAR'):
     return image_resize(input=input, out_shape=out_shape, resample=resample)
 
 
+def three_nn(input, known, eps=1e-10, name=None):
+    """
+    **Three Nearest Neighbor Layer**
+
+    This operator samples the top-3 nearest neighbor of each point
+    coordinates specified by Input(X) between known point coordinates
+    specified by Input(Known) and calcualte the distance between these
+    nearest neighbors.
+
+    Args:
+        input (Variable): The input tensor of three_nn operator. This
+                          is a 3-D tensor with shape of [B, N, 3].
+        known (Variable): The input tensor of known points of three_nn
+                          operator. This is a 3-D tensor with shape of
+                          [B, M, 3].
+        name(str|None): A name for this layer(optional). If set None, the layer
+                        will be named automatically.
+
+    Returns:
+        distance (Variable): The output distance tensor of three_nn operator.
+                             This is a 3-D tensor with shape of [B, N, 3].
+        idx (Variable): The output index tensor of three_nn operator.
+                             This is a 3-D tensor with shape of [B, N, 3].
+
+    Examples:
+
+        .. code-block:: python
+
+            import paddle.fluid as fluid
+            x = fluid.layers.data(name='x', shape=[16, 3], dtype='float32')
+            known = fluid.layers.data(name='known', shape=[32, 3], dtype='float32')
+            distance, idx = fluid.layers.three_nn(input, known)
+    """
+    helper = LayerHelper('three_nn', **locals())
+    dtype = helper.input_dtype()
+    dist = helper.create_variable_for_type_inference(dtype)
+    idx = helper.create_variable_for_type_inference(dtype)
+    helper.append_op(
+        type="three_nn",
+        inputs={"X": input,
+                "Known": known},
+        outputs={"Distance": dist,
+                 "Idx": idx},
+        attrs={'eps': eps})
+    return (dist, idx)
+
+
+def three_interp(input, weight, idx, name=None):
+    """
+    **Three Interpolate Layer**
+
+    This operator calculate interpolate results from input, weight and
+    index.
+
+    Args:
+        input (Variable): The input tensor of three_interp operator. This
+                          is a 3-D tensor with shape of [B, M, C].
+        weight (Variable): The weight tensor of three_interp operator. This
+                          is a 3-D tensor with shape of [B, N, 3].
+        idx (Variable): The index tensor of three_interp operator. This
+                          is a 3-D tensor with shape of [B, N, 3].
+        name(str|None): A name for this layer(optional). If set None, the layer
+                        will be named automatically.
+
+    Returns:
+        output (Variable): The output tensor of three_interp operator.
+                             This is a 3-D tensor with shape of [B, N, C].
+
+    Examples:
+
+        .. code-block:: python
+
+            import paddle.fluid as fluid
+            x = fluid.layers.data(name='x', shape=[16, 3], dtype='float32')
+            weight = fluid.layers.data(name='weight', shape=[32, 3], dtype='float32')
+            index = fluid.layers.data(name='index', shape=[32, 3], dtype='int32')
+            out = fluid.layers.three_interp(x, weight, index)
+    """
+    helper = LayerHelper('three_interp', **locals())
+    dtype = helper.input_dtype()
+    out = helper.create_variable_for_type_inference(dtype)
+    helper.append_op(
+        type="three_interp",
+        inputs={"X": input,
+                "Weight": weight,
+                "Idx": idx},
+        outputs={"Out": out, })
+    return out
+
+
 def gather(input, index, overwrite=True):
     """
     **Gather Layer**
@@ -8059,6 +8206,48 @@ def gather(input, index, overwrite=True):
                 "Index": index},
         outputs={"Out": out},
         attrs={'overwrite': overwrite})
+    return out
+
+
+def gather_point(input, index):
+    """
+    **Gather Point Layer**
+    Output is obtained by gathering entries of X indexed by `index` 
+    and concatenate them together.
+    .. math::
+        Out = X[Index]
+    .. code-block:: text
+        Given:
+        X = [[1, 2, 3],
+             [3, 4, 5],
+             [5, 6, 7]]
+        Index = [[1, 2]
+        Then:
+        Out = [[3, 4, 5],
+               [5, 6, 7]]
+    Args:
+        input (Variable): The source input with rank>=1, This
+                          is a 3-D tensor with shape of [B, N, 3].
+        index (Variable): The index input with shape of [B, M].
+      
+    Returns:
+        output (Variable): The output is a tensor with shape of [B,M].
+    Examples:
+        .. code-block:: python
+            import paddle.fluid as fluid
+            x = fluid.layers.data(name='x', shape=[-1, 5, 3], dtype='float32')
+            index = fluid.layers.data(name='index', shape=[-1, 1], dtype='int32')
+            output = fluid.layers.gather_point(x, index)
+    """
+
+    helper = LayerHelper('gather_point', **locals())
+    dtype = helper.input_dtype()
+    out = helper.create_variable_for_type_inference(dtype)
+    helper.append_op(
+        type="gather_point",
+        inputs={"X": input,
+                "Index": index},
+        outputs={"Output": out})
     return out
 
 
@@ -12643,4 +12832,42 @@ def shard_index(input, index_num, nshards, shard_id, ignore_value=-1):
             'ignore_value': ignore_value
         },
         stop_gradient=True)
+    return out
+
+
+def query_ball(input, new_points, radius, n_sample):
+    """
+    **Query Ball Layer**
+
+    Output is a tensor with the indicies of the features that form the query balls.
+
+    Args:
+        input(Variable): XYZ coordinates of features with shape of [B,N,3].
+        new_points(Variable): Centers coordinates of the ball query with shape of [B,M,3].
+        radius(float|Variable): Radius of the balls.
+        n_sample(int|Variable): Maximum number of features in the balls.
+    Return:
+        output(Variable): Tensor with the indicies of the features that form the query balls,with shape of [B,M,n_sample]
+
+    Examples:
+        .. code-block::python
+
+            import paddle.fluid as fluid
+            x = fluid.layers.data(name='points',shape=[-1,5,3],dtype='float32')
+            new_points = fluid.layers.data(name='new_points', shape=[-1,2,3], dtype='float32')
+            output = fluid.layers.query_ball(x,new_points,radius=4.0,n_sample=5)
+
+
+
+    """
+    helper = LayerHelper('query_ball', **locals())
+    dtype = helper.input_dtype()
+    out = helper.create_variable_for_type_inference(dtype)
+    helper.append_op(
+        type="query_ball",
+        inputs={"Points": input,
+                "New_Points": new_points},
+        attrs={"N_sample": n_sample,
+               "Radius": radius},
+        outputs={"Output": out})
     return out
