@@ -34,6 +34,22 @@ __global__ void GatherPointKernel(int b, int n, int m,
 }
 
 template <typename T>
+__global__ void GatherPointsGradKernel(int b, int n, int m,
+                                       const T *__restrict__ grad_out,
+                                       const int *__restrict__ idx,
+                                       T *__restrict__ grad_inp) {
+  for (int i = blockIdx.x; i < b; i += gridDim.x) {
+    for (int j = blockIdx.y * blockDim.x + threadIdx.x; j < m;
+         j += blockDim.x * gridDim.y) {
+      int a = idx[i * m + j];
+      atomicAdd(&grad_inp[(i * n + a) * 3 + 0], grad_out[(i * m + j) * 3 + 0]);
+      atomicAdd(&grad_inp[(i * n + a) * 3 + 1], grad_out[(i * m + j) * 3 + 1]);
+      atomicAdd(&grad_inp[(i * n + a) * 3 + 2], grad_out[(i * m + j) * 3 + 2]);
+    }
+  }
+}
+
+template <typename T>
 class GatherPointOpCUDAKernel : public framework::OpKernel<T> {
  public:
   void Compute(const framework::ExecutionContext &ctx) const override {
@@ -65,6 +81,41 @@ class GatherPointOpCUDAKernel : public framework::OpKernel<T> {
   }
 };
 
+template <typename T>
+class GatherPointOpGradCUDAKernel : public framework::OpKernel<T> {
+ public:
+  void Compute(const framework::ExecutionContext &ctx) const override {
+    PADDLE_ENFORCE(platform::is_gpu_place(ctx.GetPlace()),
+                   "This kernel only runs on GPU device.");
+    auto *points = ctx.Input<Tensor>("X");
+    auto *index = ctx.Input<Tensor>("Index");
+    auto *output_grad = ctx.Input<Tensor>(framework::GradVarName("Output"));
+    auto *points_grad = ctx.Output<Tensor>(framework::GradVarName("X"));
+    auto output_grad_data = output_grad->data<T>();
+    if (points->numel() == 0) return;
+    // allocate memory
+    points_grad->mutable_data<T>(ctx.GetPlace());
+
+    int batch_size = points->dims()[0];
+    int n_points = points->dims()[1];
+    int m_points = index->dims()[1];
+
+    // faltten
+    auto g_out_points = framework::EigenVector<T>::Flatten(*output_grad);
+    const T *grad_out_points = &(g_out_points(0));
+
+    auto g_index = framework::EigenVector<int>::Flatten(*index);
+    const int *grad_index = &(g_index(0));
+
+    auto g_point = framework::EigenVector<T>::Flatten(*points_grad);
+    T *grad_points = &(g_point(0));
+
+    GatherPointsGradKernel<<<dim3(2, 8, 1), 512>>>(batch_size, n_points,
+                                                   m_points, grad_out_points,
+                                                   grad_index, grad_points);
+  }
+};
+
 }  // namespace operators
 }  // namespace paddle
 
@@ -72,3 +123,6 @@ namespace ops = paddle::operators;
 REGISTER_OP_CUDA_KERNEL(gather_point, ops::GatherPointOpCUDAKernel<float>,
                         ops::GatherPointOpCUDAKernel<double>,
                         ops::GatherPointOpCUDAKernel<int>);
+REGISTER_OP_CUDA_KERNEL(gather_point_grad,
+                        ops::GatherPointOpGradCUDAKernel<float>,
+                        ops::GatherPointOpGradCUDAKernel<int>);

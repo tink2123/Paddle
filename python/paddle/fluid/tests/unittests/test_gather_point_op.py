@@ -50,6 +50,14 @@ class TestGatherPointOp(OpTest):
         place = core.CUDAPlace(0)
         self.check_output_with_place(place, atol=1e-1)
 
+    def test_check_grad(self):
+        place = core.CUDAPlace(0)
+        self.check_grad_with_palce(
+            place, {'X'},
+            'Output',
+            max_relative_error=0.05,
+            no_grad_set=['Index'])
+
 
 class TestCase1(TestGatherPointOp):
     def config(self):

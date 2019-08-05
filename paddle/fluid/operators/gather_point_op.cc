@@ -65,8 +65,49 @@ class GatherPointOpMaker : public framework::OpProtoAndCheckerMaker {
   }
 };
 
+class GatherPointGradOp : public framework::OperatorWithKernel {
+ public:
+  using framework::OperatorWithKernel::OperatorWithKernel;
+
+  void InferShape(framework::InferShapeContext *ctx) const override {
+    PADDLE_ENFORCE(ctx->HasInput("Index"), "Input(X) shoud not be null");
+    PADDLE_ENFORCE(ctx->HasInput(framework::GradVarName("Output")),
+                   "Input(Output@GRAD) should not be null");
+    auto x_dims = ctx->GetInputDim("X");
+    if (ctx->HasOutput(framework::GradVarName("X"))) {
+      ctx->SetOutputDim(framework::GradVarName("X"), x_dims);
+    }
+  }
+
+  framework::OpKernelType GetExpectedKernelType(
+      const framework::ExecutionContext &ctx) const override {
+    return framework::OpKernelType(
+        ctx.Input<Tensor>(framework::GradVarName("Output"))->type(),
+        ctx.GetPlace());
+  }
+};
+
+class GatherPointGradDescMaker : public framework::SingleGradOpDescMaker {
+ public:
+  using framework::SingleGradOpDescMaker::SingleGradOpDescMaker;
+
+ protected:
+  std::unique_ptr<framework::OpDesc> Apply() const override {
+    std::unique_ptr<framework::OpDesc> op(new framework::OpDesc());
+    op->SetType(ForwardOp().Type() + "_grad");
+    op->SetInput("X", Input("X"));
+    op->SetInput("Index", Input("Index"));
+    op->SetInput(framework::GradVarName("Output"), OutputGrad("Output"));
+    op->SetOutput(framework::GradVarName("X"), InputGrad("X"));
+    op->SetAttrMap(Attrs());
+    return op;
+  }
+};
+
 }  // namespace operators
 }  // namespace paddle
 
 namespace ops = paddle::operators;
-REGISTER_OPERATOR(gather_point, ops::GatherPointOp, ops::GatherPointOpMaker);
+REGISTER_OPERATOR(gather_point, ops::GatherPointOp, ops::GatherPointOpMaker,
+                  ops::GatherPointGradDescMaker);
+REGISTER_OPERATOR(gather_point_grad, ops::GatherPointGradOp);
