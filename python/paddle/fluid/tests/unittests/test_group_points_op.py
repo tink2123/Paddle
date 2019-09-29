@@ -71,8 +71,8 @@ class TestGroupPointsOp(OpTest):
 
 class TestGroupPointsOpCase1(TestGroupPointsOp):
     def init_test_case(self):
-        self.input_shape = [8, 33, 37]
-        self.idx_shape = [8, 23, 13]
+        self.input_shape = [64, 128, 512]
+        self.idx_shape = [64, 128, 64]
 
 
 if __name__ == "__main__":
