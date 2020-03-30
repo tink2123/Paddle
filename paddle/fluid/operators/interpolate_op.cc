@@ -26,8 +26,8 @@ static void Interpolate2DInferShapeCheck(framework::InferShapeContext* ctx) {
   auto interp_method = ctx->Attrs().Get<std::string>("interp_method");
 
   PADDLE_ENFORCE(
-      "bilinear" == interp_method || "nearest" == interp_method,
-      "Interpolation method can only be \"bilinear\" or \"nearest\" when "
+      "bilinear" == interp_method || "nearest" == interp_method || "bicubic" == interp_method,
+      "Interpolation method can only be \"bilinear\" or \"nearest\" or \"bicubic\" when "
       "Input(X) dimension is 4");
   const DataLayout data_layout = framework::StringToDataLayout(
       ctx->Attrs().Get<std::string>("data_layout"));
@@ -263,8 +263,9 @@ class InterpolateOpMaker : public framework::OpProtoAndCheckerMaker {
                          "(string, default \"bilinear\"), interpolation "
                          "method, can be \"bilinear\" for "
                          "bilinear interpolation, \"trilinear\" for trilinear "
-                         "interpolation and \"nearest\" for nearest "
-                         "neighbor interpolation.")
+                         "interpolation , \"nearest\" for nearest "
+                         "neighbor interpolation and \"bicubic\" for bicubic "
+                         "interpolation. ")
         .SetDefault("bilinear");
     AddAttr<bool>(
         "align_corners",
@@ -471,6 +472,11 @@ REGISTER_OPERATOR(trilinear_interp, ops::InterpolateOp, ops::InterpolateOpMaker,
                   ops::InterpolateGradMaker<paddle::imperative::OpBase>);
 REGISTER_OPERATOR(trilinear_interp_grad, ops::InterpolateOpGrad,
                   ops::InterpolateGradNoNeedBufferVarsInference);
+REGISTER_OPERATOR(bicubic_interp, ops::InterpolateOp, ops::InterpolateOpMaker,
+                  ops::InterpolateGradMaker<paddle::framework::OpDesc>,
+                  ops::InterpolateGradMaker<paddle::imperative::OpBase>);
+REGISTER_OPERATOR(bicubic_interp_grad, ops::InterpolateOpGrad,
+                  ops::InterpolateGradNoNeedBufferVarsInference);
 REGISTER_OP_CPU_KERNEL(bilinear_interp, ops::InterpolateKernel<float>,
                        ops::InterpolateKernel<double>,
                        ops::InterpolateKernel<uint8_t>);
@@ -485,4 +491,9 @@ REGISTER_OP_CPU_KERNEL(trilinear_interp, ops::InterpolateKernel<float>,
                        ops::InterpolateKernel<double>,
                        ops::InterpolateKernel<uint8_t>);
 REGISTER_OP_CPU_KERNEL(trilinear_interp_grad, ops::InterpolateGradKernel<float>,
+                       ops::InterpolateGradKernel<double>);
+REGISTER_OP_CPU_KERNEL(bicubic_interp, ops::InterpolateKernel<float>,
+                       ops::InterpolateKernel<double>,
+                       ops::InterpolateKernel<uint8_t>);
+REGISTER_OP_CPU_KERNEL(bicubic_interp_grad, ops::InterpolateGradKernel<float>,
                        ops::InterpolateGradKernel<double>);
