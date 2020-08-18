@@ -352,9 +352,6 @@ def interpolate(input,
         "out_d": -1,
         "out_h": -1,
         "out_w": -1,
-        "scale_w": -1,
-        "scale_h": -1,
-        "scale_d": -1,
         "interp_method": resample_type,
         "align_corners": align_corners,
         "align_mode": align_mode,
@@ -440,9 +437,9 @@ def interpolate(input,
         elif isinstance(scale, float) or isinstance(scale, int):
             if scale <= 0:
                 raise ValueError("Attr(scale) should be greater than zero.")
-            attrs['scale_w'], attrs['scale_h'], attrs['scale_d'] = float(scale)
+            scale = [scale, scale, scale]
+            attrs['scale'] = list(map(float, scale))
         elif isinstance(scale, list):
-            print(len(input.shape))
             if len(scale) != len(input.shape) - 2:
                 raise ValueError("scale_shape length should be {} for "
                                  "input {}-D tensor.".format(
@@ -450,19 +447,11 @@ def interpolate(input,
             for value in scale:
                 if value <= 0:
                     raise ValueError("Attr(scale) should be greater than zero.")
-            if len(scale) == 1:
-                attrs['scale_w'] = scale[0]
-            elif len(scale) == 2:
-                attrs['scale_h'] = scale[0]
-                attrs['scale_w'] = scale[1]
-            elif len(scale) == 3:
-                attrs['scale_d'] = scale[0]
-                attrs['scale_h'] = scale[1]
-                attrs['scale_w'] = scale[2]
+            attrs['scale'] = list(map(float, scale))
         else:
             raise TypeError(
                 "Attr(scale)'s type should be float, int, list or Variable.")
-
+    print("attrs:", attrs)
     out = helper.create_variable_for_type_inference(dtype)
     helper.append_op(
         type='{}_interp'.format(resample_type),

@@ -794,7 +794,7 @@ static void Interpolate1DCPUFwd(const framework::ExecutionContext& ctx,
       auto scale_data = get_new_data_from_tensor<float>(scale_tensor);
       scale = scale_data[0];
     } else {
-      scale = ctx.Attr<float>("scale_w");
+      scale = ctx.Attr<std::vector<float>>("scale")[0];
     }
     if (scale > 0) {
       out_w = static_cast<int>(in_w * scale);
@@ -867,8 +867,8 @@ static void Interpolate2DCPUFwd(const framework::ExecutionContext& ctx,
         scale_w = scale_data[0];
       }
     } else {
-      scale_w = ctx.Attr<float>("scale_w");
-      scale_h = ctx.Attr<float>("scale_h");
+      scale_h = ctx.Attr<std::vector<float>>("scale")[0];
+      scale_w = ctx.Attr<std::vector<float>>("scale")[1];
     }
     if (scale_h > 0 && scale_w > 0) {
       out_h = static_cast<int>(in_h * scale_h);
@@ -964,9 +964,9 @@ static void Interpolate3DCPUFwd(const framework::ExecutionContext& ctx,
         scale_w = scale_data[0];
       }
     } else {
-      scale_d = ctx.Attr<float>("scale_d");
-      scale_h = ctx.Attr<float>("scale_h");
-      scale_w = ctx.Attr<float>("scale_w");
+      scale_d = ctx.Attr<std::vector<float>>("scale")[0];
+      scale_h = ctx.Attr<std::vector<float>>("scale")[1];
+      scale_w = ctx.Attr<std::vector<float>>("scale")[2];
     }
     if (scale_w > 0 && scale_h > 0 && scale_d > 0) {
       out_d = static_cast<int>(in_d * scale_d);
@@ -1048,7 +1048,7 @@ static void Interpolate1DCPUBwd(const framework::ExecutionContext& ctx,
     auto scale_data = get_new_data_from_tensor<float>(scale_tensor);
     scale = scale_data[0];
   } else {
-    scale = ctx.Attr<float>("scale_w");
+    scale = ctx.Attr<std::vector<float>>("scale")[0];
   }
   if (scale > 0) {
     out_w = static_cast<int>(in_w * scale);
@@ -1121,8 +1121,8 @@ static void Interpolate2DCPUBwd(const framework::ExecutionContext& ctx,
       scale_h = scale_data[0];
     }
   } else {
-    scale_h = ctx.Attr<float>("scale_h");
-    scale_w = ctx.Attr<float>("scale_w");
+    scale_h = ctx.Attr<std::vector<float>>("scale")[0];
+    scale_w = ctx.Attr<std::vector<float>>("scale")[1];
   }
   if (scale_h > 0 && scale_w > 0) {
     out_h = static_cast<int>(in_h * scale_h);
@@ -1217,9 +1217,9 @@ static void Interpolate3DCPUBwd(const framework::ExecutionContext& ctx,
       scale_w = scale_data[0];
     }
   } else {
-    scale_d = ctx.Attr<float>("scale_d");
-    scale_h = ctx.Attr<float>("scale_h");
-    scale_w = ctx.Attr<float>("scale_w");
+    scale_d = ctx.Attr<std::vector<float>>("scale")[0];
+    scale_h = ctx.Attr<std::vector<float>>("scale")[1];
+    scale_w = ctx.Attr<std::vector<float>>("scale")[2];
   }
   if (scale_d > 0 && scale_h > 0 && scale_w > 0) {
     out_d = static_cast<int>(in_d * scale_d);

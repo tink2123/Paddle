@@ -69,14 +69,16 @@ static void Interpolate1DInferShapeCheck(framework::InferShapeContext* ctx) {
             "Scale's shape must be 1, but got shape = %d .", scale_tensor[0]));
     out_w = -1;
   } else {
-    float scale_w = ctx->Attrs().Get<float>("scale_w");
-    if (scale_w > 0) {
-      // round down
-      out_w = (data_layout == DataLayout::kNCHW
-                   ? static_cast<int>(dim_x[2] * scale_w)
-                   : static_cast<int>(dim_x[1] * scale_w));
-      // protect when input shape is -1
-      out_w = out_w > 0 ? out_w : -1;
+    if (ctx->HasInput("scale")) {
+      float scale_w = ctx->Attrs().Get<std::vector<float>>("scale")[0];
+      if (scale_w > 0) {
+        // round down
+        out_w = (data_layout == DataLayout::kNCHW
+                     ? static_cast<int>(dim_x[2] * scale_w)
+                     : static_cast<int>(dim_x[1] * scale_w));
+        // protect when input shape is -1
+        out_w = out_w > 0 ? out_w : -1;
+      }
     } else {
       out_w = ctx->Attrs().Get<int>("out_w");
     }
@@ -155,19 +157,21 @@ static void Interpolate2DInferShapeCheck(framework::InferShapeContext* ctx) {
     out_h = -1;
     out_w = -1;
   } else {
-    float scale_h = ctx->Attrs().Get<float>("scale_h");
-    float scale_w = ctx->Attrs().Get<float>("scale_w");
-    if (scale_h > 0 && scale_w > 0) {
-      // round down
-      out_h = (data_layout == DataLayout::kNCHW
-                   ? static_cast<int>(dim_x[2] * scale_h)
-                   : static_cast<int>(dim_x[1] * scale_h));
-      out_w = (data_layout == DataLayout::kNCHW
-                   ? static_cast<int>(dim_x[3] * scale_w)
-                   : static_cast<int>(dim_x[2] * scale_w));
-      // protect when input shape is -1
-      out_h = out_h > 0 ? out_h : -1;
-      out_w = out_w > 0 ? out_w : -1;
+    if (ctx->HasInput("scale")) {
+      float scale_h = ctx->Attrs().Get<std::vector<float>>("scale")[0];
+      float scale_w = ctx->Attrs().Get<std::vector<float>>("scale")[1];
+      if (scale_h > 0 && scale_w > 0) {
+        // round down
+        out_h = (data_layout == DataLayout::kNCHW
+                     ? static_cast<int>(dim_x[2] * scale_h)
+                     : static_cast<int>(dim_x[1] * scale_h));
+        out_w = (data_layout == DataLayout::kNCHW
+                     ? static_cast<int>(dim_x[3] * scale_w)
+                     : static_cast<int>(dim_x[2] * scale_w));
+        // protect when input shape is -1
+        out_h = out_h > 0 ? out_h : -1;
+        out_w = out_w > 0 ? out_w : -1;
+      }
     } else {
       out_h = ctx->Attrs().Get<int>("out_h");
       out_w = ctx->Attrs().Get<int>("out_w");
@@ -252,25 +256,27 @@ static void Interpolate3DInferShapeCheck(framework::InferShapeContext* ctx) {
     out_h = -1;
     out_w = -1;
   } else {
-    float scale_d = ctx->Attrs().Get<float>("scale_d");
-    float scale_h = ctx->Attrs().Get<float>("scale_h");
-    float scale_w = ctx->Attrs().Get<float>("scale_w");
+    if (ctx->HasInput("scale")) {
+      float scale_d = ctx->Attrs().Get<std::vector<float>>("scale")[0];
+      float scale_h = ctx->Attrs().Get<std::vector<float>>("scale")[1];
+      float scale_w = ctx->Attrs().Get<std::vector<float>>("scale")[2];
 
-    if (scale_d > 0 && scale_h > 0 && scale_w > 0) {
-      // round down
-      out_d = (data_layout == DataLayout::kNCHW
-                   ? static_cast<int>(dim_x[2] * scale_d)
-                   : static_cast<int>(dim_x[1] * scale_d));
-      out_h = (data_layout == DataLayout::kNCHW
-                   ? static_cast<int>(dim_x[3] * scale_h)
-                   : static_cast<int>(dim_x[2] * scale_h));
-      out_w = (data_layout == DataLayout::kNCHW
-                   ? static_cast<int>(dim_x[4] * scale_w)
-                   : static_cast<int>(dim_x[3] * scale_w));
-      // protect when input shape is -1
-      out_d = out_d > 0 ? out_d : -1;
-      out_h = out_h > 0 ? out_h : -1;
-      out_w = out_w > 0 ? out_w : -1;
+      if (scale_d > 0 && scale_h > 0 && scale_w > 0) {
+        // round down
+        out_d = (data_layout == DataLayout::kNCHW
+                     ? static_cast<int>(dim_x[2] * scale_d)
+                     : static_cast<int>(dim_x[1] * scale_d));
+        out_h = (data_layout == DataLayout::kNCHW
+                     ? static_cast<int>(dim_x[3] * scale_h)
+                     : static_cast<int>(dim_x[2] * scale_h));
+        out_w = (data_layout == DataLayout::kNCHW
+                     ? static_cast<int>(dim_x[4] * scale_w)
+                     : static_cast<int>(dim_x[3] * scale_w));
+        // protect when input shape is -1
+        out_d = out_d > 0 ? out_d : -1;
+        out_h = out_h > 0 ? out_h : -1;
+        out_w = out_w > 0 ? out_w : -1;
+      }
     } else {
       out_d = ctx->Attrs().Get<int>("out_d");
       out_h = ctx->Attrs().Get<int>("out_h");
@@ -386,12 +392,8 @@ class InterpolateOpMaker : public framework::OpProtoAndCheckerMaker {
     AddAttr<int>("out_d", "output depth of interpolate op.").SetDefault(0);
     AddAttr<int>("out_h", "output height of interpolate op.").SetDefault(0);
     AddAttr<int>("out_w", "output width of interpolate op.").SetDefault(0);
-    AddAttr<float>("scale_w", "scale_w factor of interpolate op.")
-        .SetDefault(0.);
-    AddAttr<float>("scale_h", "scale_h factor of interpolate op.")
-        .SetDefault(0.);
-    AddAttr<float>("scale_d", "scale_d factor of interpolate op.")
-        .SetDefault(0.);
+    AddAttr<std::vector<float>>("scale", "scale_d factor of interpolate op.")
+        .SetDefault(std::vector<float>{});
     AddAttr<std::string>("interp_method",
                          "(string, default \"bilinear\"), interpolation "
                          "method, can be \"linear\" for linear interpolation"
