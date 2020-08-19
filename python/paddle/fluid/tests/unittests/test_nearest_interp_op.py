@@ -76,13 +76,12 @@ class TestNearestInterpOp(OpTest):
     def setUp(self):
         self.out_size = None
         self.actual_shape = None
-        self.scale_w = -1
-        self.scale_h = -1
         self.data_layout = 'NCHW'
         self.init_test_case()
         self.op_type = "nearest_interp"
         input_np = np.random.random(self.input_shape).astype("float64")
-
+        scale_w = -1
+        scale_h = -1
         if self.data_layout == "NCHW":
             in_h = self.input_shape[2]
             in_w = self.input_shape[3]
@@ -90,16 +89,20 @@ class TestNearestInterpOp(OpTest):
             in_h = self.input_shape[1]
             in_w = self.input_shape[2]
 
-        if self.scale:
+        if self.scale > 0:
             if isinstance(self.scale, list) and len(self.scale) > 1:
-                self.scale_w = self.scale[1]
-                self.scale_h = self.scale[0]
-            elif self.scale > 0:
-                self.scale_w = self.scale_h = self.scale
-
-            if self.scale_w > 0 and self.scale_h > 0:
-                out_h = int(in_h * self.scale_h)
-                out_w = int(in_w * self.scale_w)
+                scale_w = self.scale[1]
+                scale_h = self.scale[0]
+            elif isinstance(self.scale, float) or isinstance(self.scale, int):
+                scale_w = scale_h = self.scale
+            elif isinstance(self.scale, list) and len(self.scale) == 1:
+                scale_w = scale_h = self.scale[0]
+            if scale_w > 0 and scale_h > 0:
+                out_h = int(in_h * scale_h)
+                out_w = int(in_w * scale_w)
+            if isinstance(self.scale, int) or isinstance(self.scale, float):
+                self.scale = [self.scale]
+            #self.attrs['scale'] = self.scale
         else:
             out_h = self.out_h
             out_w = self.out_w
@@ -115,12 +118,12 @@ class TestNearestInterpOp(OpTest):
         self.attrs = {
             'out_h': self.out_h,
             'out_w': self.out_w,
-            'scale_w': self.scale_w,
-            'scale_h': self.scale_h,
             'interp_method': self.interp_method,
             'align_corners': self.align_corners,
             'data_layout': self.data_layout
         }
+        if self.scale > 0:
+            self.attrs['scale'] = self.scale
         self.outputs = {'Out': output_np}
 
     def test_check_output(self):
@@ -260,10 +263,11 @@ class TestNearestInterpOpUint8(OpTest):
         self.attrs = {
             'out_h': self.out_h,
             'out_w': self.out_w,
-            'scale': self.scale,
             'interp_method': self.interp_method,
             'align_corners': self.align_corners
         }
+        if self.scale > 0:
+            self.attrs['scale'] = [self.scale]
         self.outputs = {'Out': output_np}
 
     def test_check_output(self):
@@ -337,16 +341,6 @@ class TestNearestNeighborInterpScale3(TestNearestInterpOp):
         self.align_corners = True
 
 
-class TestNearestNeighborInterpScale4(TestNearestInterpOp):
-    def init_test_case(self):
-        self.interp_method = 'nearest'
-        self.input_shape = [3, 2, 7, 5]
-        self.out_h = 64
-        self.out_w = 32
-        self.scale = [1., 2.]
-        self.align_corners = True
-
-
 class TestNearestInterpOp_attr_tensor(OpTest):
     def setUp(self):
         self.out_size = None
@@ -363,16 +357,17 @@ class TestNearestInterpOp_attr_tensor(OpTest):
         input_np = np.random.random(self.input_shape).astype("float64")
         self.inputs = {'X': input_np}
 
-        if self.scale_by_1Dtensor:
-            self.inputs['Scale'] = np.array([self.scale]).astype("float64")
-        elif self.scale > 0:
-            out_h = int(self.input_shape[2] * self.scale)
-            out_w = int(self.input_shape[3] * self.scale)
-            self.attrs['scale'] = self.scale
-        else:
+        if self.out_w > 0 and self.out_h > 0:
             out_h = self.out_h
             out_w = self.out_w
-
+        else:
+            if self.scale_by_1Dtensor:
+                self.inputs['Scale'] = np.array([self.scale]).astype("float64")
+            elif self.scale > 0:
+                out_h = int(self.input_shape[2] * self.scale)
+                out_w = int(self.input_shape[3] * self.scale)
+                self.scale = [self.scale]
+                self.attrs['scale'] = self.scale
         if self.shape_by_1Dtensor:
             self.inputs['OutSize'] = self.out_size
         elif self.out_size is not None:
@@ -381,7 +376,6 @@ class TestNearestInterpOp_attr_tensor(OpTest):
                 size_tensor.append(("x" + str(index), np.ones(
                     (1)).astype('int32') * ele))
             self.inputs['SizeTensor'] = size_tensor
-
         self.attrs['out_h'] = self.out_h
         self.attrs['out_w'] = self.out_w
         output_np = nearest_neighbor_interp_np(input_np, out_h, out_w,
@@ -396,6 +390,8 @@ class TestNearestInterpOp_attr_tensor(OpTest):
         self.check_grad(['X'], 'Out', in_place=True)
 
     def init_test_case(self):
+        self.shape_by_1Dtensor = False
+        self.scale_by_1Dtensor = False
         self.interp_method = 'nearest'
         self.input_shape = [2, 5, 4, 4]
         self.out_h = 3
