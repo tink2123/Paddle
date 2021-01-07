@@ -48,7 +48,7 @@ import paddle.metric
 import paddle.device
 import paddle.incubate.complex as complex
 import paddle.regularizer
-
+import paddle.incubate
 # TODO: define alias in tensor and framework directory
 
 from .tensor.random import randperm
